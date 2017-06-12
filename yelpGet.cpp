@@ -2,6 +2,7 @@
 //Created May 24 2017 by Marius, based on Bing API file created by another author
 
 #include "yelpGet.h"
+#include "rapidjson/document.h"
 #include <curl/curl.h>
 #include <memory>
 #include <exception>
@@ -130,14 +131,14 @@ struct curl_boo {
     std::string getSearchResponse(const std::string& content, std::pair<double, double> coordinates, unsigned numResultsToSearch) {
         std::string result;
         std::string fullRequest = yelpAPI::formYelpSearchAPIRequest(content, coordinates, numResultsToSearch);
-        
+
         //Creating request header structure
         struct curl_slist *theHeader = NULL;
         std::string accessToken = "authorization: Bearer " + yelpAPI::getAccessToken();
         //Required header info access token
         theHeader = curl_slist_append(theHeader, accessToken.c_str());
         std::cout << accessToken << std::endl;
-        
+
         curl_easy_setopt(searchHandle, CURLOPT_URL, fullRequest.c_str());
         curl_easy_setopt(searchHandle, CURLOPT_HTTPHEADER, theHeader);
         curl_easy_setopt(searchHandle, CURLOPT_WRITEDATA, &result);
@@ -220,9 +221,12 @@ int yelpAPI::yelpSearch(const std::string& content, std::pair<double, double> co
         std::vector<searchResult> searchResults;
         std::string contentSimplified;
 
-        
+
         JSONresult = instPtr->getSearchResponse(content, std::make_pair(43.6543, -79.3860), numResultsToSearch);
-        
+
+
+
+
     }
     return FOURSQUARE_SEARCH_SUCCESS;
 }
@@ -272,6 +276,28 @@ int yelpAPI::yelpGetAddress(const std::string& content, std::pair<double, double
     }
 
     if (resultSuccess == 0) {
+        //Creating a json document using rapidjson in order to extract information more easily
+        rapidjson::Document document;
+        document.Parse(previousSearch.JSONfile.c_str());
+        //Extracting total number of results
+        assert(document.HasMember("total"));
+        assert(document["total"].IsInt());
+        std::cout << "Number of Results = " << document["total"].GetInt() << std::endl;
+
+        const rapidjson::Value& a = document["businesses"];
+        assert(a.IsArray());
+        int resultNumber = 1;
+        for (rapidjson::SizeType i = 0; i < a.Size(); i++) { // Uses SizeType instead of size_t
+             assert(a[i].HasMember("name"));
+             
+             std::cout << resultNumber << ". " << a[i]["name"].GetString() << std::endl;
+
+            resultNumber++;
+        }
+
+        //        assert(document.HasMember("name"));
+        //        assert(document["name"].IsString());
+        //        std::cout << "hello = " << document["hello"].GetString() << std::endl;
 
     }
     return resultSuccess;
@@ -288,7 +314,7 @@ int yelpAPI::yelpGetRating(const std::string& content, std::pair<double, double>
     }
 
     if (resultSuccess == 0) {
- 
+
     }
 
     return resultSuccess;
@@ -305,7 +331,7 @@ int yelpAPI::yelpGetOther(const std::string& content, const std::string& dataToF
     }
 
     if (resultSuccess == 0) {
-       
+
     }
 
     return resultSuccess;
@@ -322,7 +348,7 @@ int yelpAPI::yelpGetCost(const std::string& content, std::pair<double, double> c
     }
 
     if (resultSuccess == 0) {
-        
+
     }
 
     return resultSuccess;
@@ -338,6 +364,6 @@ void yelpAPI::enablePartialMatches(bool enablePartial, bool partialVerbose) {
 
 }
 
-std::string yelpAPI::getAccessToken(){
+std::string yelpAPI::getAccessToken() {
     return theAccessToken;
 }

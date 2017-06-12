@@ -15,7 +15,6 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include "rapidjson/document.h"
 #include "yelpGet.h"
 
 using namespace std;
@@ -40,7 +39,7 @@ int main(int argc, char** argv) {
     yelpAPI::close();
     yelpAPI::init();
     
-    yelpAPI::yelpGetAddress("Starbucks", std::make_pair(longitude, latitude), numResultsToSearch, resultAddress);
+    yelpAPI::yelpGetAddress("fast food", std::make_pair(longitude, latitude), numResultsToSearch, resultAddress);
     
     /*
 
