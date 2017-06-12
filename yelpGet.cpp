@@ -19,7 +19,7 @@
 #define FOURSQUARE_SEARCH_NO_RESPONSE -2
 #define FOURSQUARE_NO_MATCHING_VENUE_DATA -3
 
-#define DEBUG_SEARCH
+//#define DEBUG_SEARCH
 
 
 
@@ -67,7 +67,7 @@ std::string percentEncode(std::string raw) {
 std::string yelpAPI::formYelpSearchAPIRequest(const std::string& content, std::pair<double, double> coordinates, unsigned numResultsToSearch) {
     static const std::string foursquareAPIURL = "https://api.yelp.com/v3/";
     unsigned numResults;
-    if (numResultsToSearch == 0) numResults = 5;
+    if (numResultsToSearch == 0) numResults = 3;
     else numResults = numResultsToSearch;
     std::string searchContent = "term=" + percentEncode(content);
     std::string latitude = "&latitude=" + std::to_string(coordinates.first);
@@ -137,7 +137,7 @@ struct curl_boo {
         std::string accessToken = "authorization: Bearer " + yelpAPI::getAccessToken();
         //Required header info access token
         theHeader = curl_slist_append(theHeader, accessToken.c_str());
-        std::cout << accessToken << std::endl;
+
 
         curl_easy_setopt(searchHandle, CURLOPT_URL, fullRequest.c_str());
         curl_easy_setopt(searchHandle, CURLOPT_HTTPHEADER, theHeader);
@@ -204,7 +204,7 @@ void yelpAPI::retreiveAccessToken() {
         }
 
         theAccessToken = theToken;
-        std::cout << theToken << std::endl;
+
 
     } else {
         std::cerr << "ERROR: unexpected token retrieval response" << std::endl;
@@ -282,22 +282,30 @@ int yelpAPI::yelpGetAddress(const std::string& content, std::pair<double, double
         //Extracting total number of results
         assert(document.HasMember("total"));
         assert(document["total"].IsInt());
-        std::cout << "Number of Results = " << document["total"].GetInt() << std::endl;
+        std::cout << "Number of Results = " << document["total"].GetInt() << "\n" << std::endl;
 
         const rapidjson::Value& a = document["businesses"];
         assert(a.IsArray());
         int resultNumber = 1;
+        //Loops through JSON array of all results, extracts business names, ratings, price and address
         for (rapidjson::SizeType i = 0; i < a.Size(); i++) { // Uses SizeType instead of size_t
              assert(a[i].HasMember("name"));
-             
              std::cout << resultNumber << ". " << a[i]["name"].GetString() << std::endl;
-
+             
+             std::cout << a[i]["rating"].GetDouble() << "/5 stars (" << a[i]["review_count"].GetInt() << " Reviews)"  << std::endl;
+             std::cout << "Pricing: " << a[i]["price"].GetString() << std::endl;
+             
+             //Extracting the address, this is stored inside a object, inside the array
+             std::string streetAddress = a[i]["location"]["address1"].GetString();
+             std::string city  = a[i]["location"]["city"].GetString();
+             std::string provinceOrState = a[i]["location"]["state"].GetString();
+                     
+             std::cout << streetAddress << ", " << city << ", " << provinceOrState << std::endl;
+            
+             
+             std::cout << std::endl;
             resultNumber++;
         }
-
-        //        assert(document.HasMember("name"));
-        //        assert(document["name"].IsString());
-        //        std::cout << "hello = " << document["hello"].GetString() << std::endl;
 
     }
     return resultSuccess;

@@ -39,7 +39,14 @@ int main(int argc, char** argv) {
     yelpAPI::close();
     yelpAPI::init();
     
-    yelpAPI::yelpGetAddress("fast food", std::make_pair(longitude, latitude), numResultsToSearch, resultAddress);
+    while(true){
+     std::cout << "Enter Search term: ";
+     std::getline(std::cin, userInput);    
+     if(userInput == "end" || userInput == "\0") break;
+    yelpAPI::yelpGetAddress(userInput, std::make_pair(longitude, latitude), numResultsToSearch, resultAddress);
+    
+    
+    }
     
     /*
 
