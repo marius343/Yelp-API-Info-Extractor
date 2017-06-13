@@ -169,25 +169,31 @@ int yelpAPI::yelpSearch(const std::string& content, std::pair<double, double> co
                     previousSearch.JSONfile.clear();
                     return YELP_NO_MATCHING_DATA;
                 }
-                int resultNumber = 1;
-                std::cout << "No matching venues, choose one of the following or type -1 to exit" << std::endl;
 
-                for (unsigned j = 0; j < searchResults.size(); j++) {
-                    std::cout << resultNumber << ". " << searchResults[j].businessName << std::endl;
-                    resultNumber++;
-                }
-                std::string userInput;
-                std::cout << "Number: ";
-                std::getline(std::cin, userInput);
+                if (searchResults.size() > 1) {
+                    int resultNumber = 1;
+                    std::cout << "No matching businesses, choose one of the following or type -1 to exit" << std::endl;
 
-                //Getting user input, converting it to an integer (if its valid), and checking to see if its in range
-                if (isInteger(userInput)) {
-                    int userInputInt = stoi(userInput);
-                    if (userInputInt > 0 && userInputInt <= static_cast<int> (searchResults.size())) {
-                        previousSearch.businessName = searchResults[userInputInt - 1].businessName;
-                        previousSearch.businessIndex = searchResults[userInputInt - 1].businessIndex;
-                        return YELP_SEARCH_SUCCESS;
+                    for (unsigned j = 0; j < searchResults.size(); j++) {
+                        std::cout << resultNumber << ". " << searchResults[j].businessName << std::endl;
+                        resultNumber++;
                     }
+                    std::string userInput;
+                    std::cout << "Number: ";
+                    std::getline(std::cin, userInput);
+
+                    //Getting user input, converting it to an integer (if its valid), and checking to see if its in range
+                    if (isInteger(userInput)) {
+                        int userInputInt = stoi(userInput);
+                        if (userInputInt > 0 && userInputInt <= static_cast<int> (searchResults.size())) {
+                            previousSearch.businessName = searchResults[userInputInt - 1].businessName;
+                            previousSearch.businessIndex = searchResults[userInputInt - 1].businessIndex;
+                            return YELP_SEARCH_SUCCESS;
+                        }
+                    }
+
+                } else {
+                    std::cout << "Error: 0 results found for search term" << std::endl;
                 }
 
                 previousSearch.JSONfile.clear();
@@ -349,7 +355,7 @@ int yelpAPI::yelpGetCoordinates(std::pair<double, double> &coordinates) {
 //Note, switch to key=alias if storing the category in a file, key=title is only for display purposes
 
 int yelpAPI::yelpGetCategories(std::string &category) {
- if (previousSearch.JSONfile.empty() == false) {
+    if (previousSearch.JSONfile.empty() == false) {
         rapidjson::Document document;
         document.Parse(previousSearch.JSONfile.c_str());
 
@@ -360,13 +366,13 @@ int yelpAPI::yelpGetCategories(std::string &category) {
             //If statements required to ensure that each key exists in the object
             if (a[previousSearch.businessIndex].HasMember("categories")) {
                 const rapidjson::Value& theCategoryArray = a[previousSearch.businessIndex]["categories"];
-               
+
                 //Use the alias if storing the category in a file
                 //if(theCategoryArray[0].HasMember("alias")) category = theCategoryArray[0]["alias"].GetString();
-                
+
                 //Use title if printing out the category
-                if(theCategoryArray[0].HasMember("title")) category = theCategoryArray[0]["title"].GetString();
-                
+                if (theCategoryArray[0].HasMember("title")) category = theCategoryArray[0]["title"].GetString();
+
                 return YELP_SEARCH_SUCCESS;
             }
         }
@@ -377,8 +383,8 @@ int yelpAPI::yelpGetCategories(std::string &category) {
         return YELP_NO_MATCHING_DATA;
     }
 
-    
-    
+
+
 
     return YELP_NO_MATCHING_DATA;
 }
@@ -396,9 +402,9 @@ int yelpAPI::yelpGetOther(const std::string& keyToFind, std::string &result) {
             const rapidjson::Value& a = document["businesses"];
             if (a[previousSearch.businessIndex].HasMember(theKey) == true) {
                 //Checking data type and converting if necessary. 
-                if(a[previousSearch.businessIndex][theKey].IsString())result = a[previousSearch.businessIndex][theKey].GetString();
-                if(a[previousSearch.businessIndex][theKey].IsInt())result = std::to_string(a[previousSearch.businessIndex][theKey].GetInt());
-                if(a[previousSearch.businessIndex][theKey].IsDouble())result = std::to_string(a[previousSearch.businessIndex][theKey].GetDouble());               
+                if (a[previousSearch.businessIndex][theKey].IsString())result = a[previousSearch.businessIndex][theKey].GetString();
+                if (a[previousSearch.businessIndex][theKey].IsInt())result = std::to_string(a[previousSearch.businessIndex][theKey].GetInt());
+                if (a[previousSearch.businessIndex][theKey].IsDouble())result = std::to_string(a[previousSearch.businessIndex][theKey].GetDouble());
                 return YELP_SEARCH_SUCCESS;
             }
         }

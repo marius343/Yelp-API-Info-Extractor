@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 /* 
  * File:   main.cpp
  * Author: marius
@@ -21,6 +15,7 @@ using namespace std;
 
 
 //For printing out bold text to the terminal
+
 std::ostream& bold_on(std::ostream& os) {
     return os << "\e[1m";
 }
@@ -57,22 +52,24 @@ int main(int argc, char** argv) {
         std::getline(std::cin, userInput);
         if (userInput == "end" || userInput == "\0") break;
         //DOing the search and retrieving all the information
-        yelpAPI::yelpSearch(userInput, std::make_pair(longitude, latitude), numResultsToSearch);
-        yelpAPI::yelpGetName(name);
-        yelpAPI::yelpGetAddress(resultAddress);
-        yelpAPI::yelpGetCategories(category);
-        yelpAPI::yelpGetRating(ratingOutOfFive, numberOfReviews);
-        yelpAPI::yelpGetCoordinates(actualCoordinates);
-        //yelpAPI::yelpGetOther("phone", otherValue);
-        if (yelpAPI::yelpGetCost(price) != 0) price = "?";
+        int result = yelpAPI::yelpSearch(userInput, std::make_pair(longitude, latitude), numResultsToSearch);
+        if (result == 0) {
+            yelpAPI::yelpGetName(name);
+            yelpAPI::yelpGetAddress(resultAddress);
+            yelpAPI::yelpGetCategories(category);
+            yelpAPI::yelpGetRating(ratingOutOfFive, numberOfReviews);
+            yelpAPI::yelpGetCoordinates(actualCoordinates);
+            //yelpAPI::yelpGetOther("phone", otherValue);
+            if (yelpAPI::yelpGetCost(price) != 0) price = "?";
 
-        //Printing out result (for testing only)
-        std::cout << "\n" << bold_on << name << bold_off << "\n" <<"Category: " << category << std::endl;
-        std::cout << resultAddress << std::endl;
-        std::cout << ratingOutOfFive << "/5 stars (" << numberOfReviews << " reviews)" << std::endl;
-        std::cout << "Price: " << price << std::endl;
-        std::cout << actualCoordinates.first << ", " << actualCoordinates.second << std::endl;
-        //std::cout << otherValue << std::endl;
+            //Printing out result (for testing only)
+            std::cout << "\n" << bold_on << name << bold_off << "\n" << "Category: " << category << std::endl;
+            std::cout << resultAddress << std::endl;
+            std::cout << ratingOutOfFive << "/5 stars (" << numberOfReviews << " reviews)" << std::endl;
+            std::cout << "Price: " << price << std::endl;
+            std::cout << actualCoordinates.first << ", " << actualCoordinates.second << std::endl;
+            //std::cout << otherValue << std::endl;           
+        }
         std::cout << std::endl;
     }
 
