@@ -19,15 +19,23 @@
 
 using namespace std;
 
+
+//For printing out bold text to the terminal
+std::ostream& bold_on(std::ostream& os) {
+    return os << "\e[1m";
+}
+
+std::ostream& bold_off(std::ostream& os) {
+    return os << "\e[0m";
+}
+
 /*
  * 
  */
 int main(int argc, char** argv) {
     std::string userInput = "\0";
-
-    int resultSuccess;
     double longitude = 0.0, latitude = 0.0;
-    std::pair<double, double> actualCoordinates;
+
     unsigned numResultsToSearch = 5;
 
     //The API must be re-initialized after retrieving the access token (for now at least)
@@ -41,23 +49,30 @@ int main(int argc, char** argv) {
     while (true) {
         int numberOfReviews;
         double ratingOutOfFive;
-        std::string name = "", price = "", resultAddress = "";
+        std::string name = "", price = "", resultAddress = "", category = "", otherValue = "";
+        std::pair<double, double> actualCoordinates;
 
 
-        std::cout << "Enter Search term: ";
+        std::cout << "Enter search term: ";
         std::getline(std::cin, userInput);
         if (userInput == "end" || userInput == "\0") break;
         //DOing the search and retrieving all the information
         yelpAPI::yelpSearch(userInput, std::make_pair(longitude, latitude), numResultsToSearch);
         yelpAPI::yelpGetName(name);
         yelpAPI::yelpGetAddress(resultAddress);
+        yelpAPI::yelpGetCategories(category);
         yelpAPI::yelpGetRating(ratingOutOfFive, numberOfReviews);
-        if(yelpAPI::yelpGetCost(price) != 0 ) price = "?";
+        yelpAPI::yelpGetCoordinates(actualCoordinates);
+        //yelpAPI::yelpGetOther("phone", otherValue);
+        if (yelpAPI::yelpGetCost(price) != 0) price = "?";
 
         //Printing out result (for testing only)
-        std::cout << "\n" << name << "\n" << resultAddress << std::endl;
+        std::cout << "\n" << bold_on << name << bold_off << "\n" <<"Category: " << category << std::endl;
+        std::cout << resultAddress << std::endl;
         std::cout << ratingOutOfFive << "/5 stars (" << numberOfReviews << " reviews)" << std::endl;
         std::cout << "Price: " << price << std::endl;
+        std::cout << actualCoordinates.first << ", " << actualCoordinates.second << std::endl;
+        //std::cout << otherValue << std::endl;
         std::cout << std::endl;
     }
 

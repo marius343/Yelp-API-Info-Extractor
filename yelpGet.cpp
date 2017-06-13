@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 #include <memory>
 #include <exception>
+#include <string> 
 #include <unordered_set>
 #include <sstream>
 #include <string>
@@ -12,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <ctype.h>
+#include "curlHeader.h"
 
 #define YELP_SEARCH_SUCCESS 0
 #define YELP_ERROR_UNINITIALIZED -1
@@ -28,13 +30,8 @@ bool isVerboseOn = true;
 bool isVerboseOn = false;
 #endif
 
-
-//Global Variables
-
-
-//Client public and secret ID, current IDs are temporary development IDS. They should be changed for the final version
-const std::string clientID = "client_id=TY3Cij8USYvx48B0twBzCA";
-const std::string clientSecretID = "client_secret=zG2JD7UuufNPqhQ5ctcf2wAVZuBXhAAjkZjm7vMRdIz7vIvB7fe9p7aXXPNO5vxz";
+//Pointer to a curl structure used for making calls to API
+static std::unique_ptr<curl_boo> instPtr;
 
 //Static member definition
 std::string yelpAPI::theAccessToken;
@@ -92,95 +89,6 @@ size_t writeDataToString(char *ptr, size_t size, size_t nmemb, void *stream) {
     ((std::string*)stream)->append(ptr, size * nmemb);
     return size*nmemb;
 }
-
-//**********************************************************************************
-
-//Curl structure for HTTPS requests
-
-struct curl_boo {
-    CURL* searchHandle;
-    bool isInit;
-    bool isSuccessful;
-
-    curl_boo() : searchHandle(nullptr), isInit(false), isSuccessful(false) {
-        if (curl_global_init(CURL_GLOBAL_DEFAULT) == CURLE_OK) {
-            isInit = true;
-            searchHandle = curl_easy_init();
-            if (searchHandle != NULL) {
-                isSuccessful = true;
-                curl_easy_setopt(searchHandle, CURLOPT_WRITEFUNCTION, writeDataToString);
-                curl_easy_setopt(searchHandle, CURLOPT_FAILONERROR, 1l);
-                curl_easy_setopt(searchHandle, CURLOPT_NOSIGNAL, 1l);
-
-            }
-        }
-    }
-
-    ~curl_boo() {
-        if (isInit) {
-            if (isSuccessful) {
-                curl_easy_cleanup(searchHandle);
-            }
-            curl_global_cleanup();
-        }
-    }
-
-    //Gets the search results by conducting an HTTP request with a custom header
-
-    std::string getSearchResponse(const std::string& content, std::pair<double, double> coordinates, unsigned numResultsToSearch) {
-        std::string result;
-        std::string fullRequest = yelpAPI::formYelpSearchAPIRequest(content, coordinates, numResultsToSearch);
-
-        //Creating request header structure
-        struct curl_slist *theHeader = NULL;
-        std::string accessToken = "authorization: Bearer " + yelpAPI::getAccessToken();
-        //Required header info access token
-        theHeader = curl_slist_append(theHeader, accessToken.c_str());
-
-
-        curl_easy_setopt(searchHandle, CURLOPT_URL, fullRequest.c_str());
-        curl_easy_setopt(searchHandle, CURLOPT_HTTPHEADER, theHeader);
-        curl_easy_setopt(searchHandle, CURLOPT_WRITEDATA, &result);
-        CURLcode retValue = curl_easy_perform(searchHandle);
-
-#ifdef DEBUG_SEARCH
-        std::cout << std::endl;
-        std::cout << "Result is: \n" << result << " (" << retValue << ")" << std::endl;
-        std::cout << std::endl;
-#endif
-
-        if (retValue != CURLE_OK) {
-            result.clear();
-        }
-        return result;
-    }
-
-    std::string getAccessTokenResponse(std::string theURL) {
-        std::string result;
-        std::string fullRequest = theURL;
-        std::string postFields = "grant_type=client_credentials&" + clientID + "&" + clientSecretID;
-
-        curl_easy_setopt(searchHandle, CURLOPT_URL, fullRequest.c_str());
-        curl_easy_setopt(searchHandle, CURLOPT_POSTFIELDS, postFields.c_str());
-        curl_easy_setopt(searchHandle, CURLOPT_WRITEDATA, &result);
-
-        CURLcode retValue = curl_easy_perform(searchHandle);
-
-#ifdef DEBUG_SEARCH
-        std::cout << std::endl;
-        std::cout << "Result is: \n" << result << std::endl;
-        std::cout << std::endl;
-#endif
-
-        if (retValue != CURLE_OK) {
-            result.clear();
-        }
-
-        return result;
-    }
-};
-
-static std::unique_ptr<curl_boo> instPtr;
 
 //Retrieves the Access token at the beginning of the program
 
@@ -310,22 +218,6 @@ void yelpAPI::close() {
     instPtr.reset();
 }
 
-//Checks if previous search is identical using structure
-
-bool yelpAPI::previousSearchIdentical(const std::string& content, const std::pair<double, double>& coordinates) {
-    if (content == previousSearch.businessName || content == "") {
-        if (coordinates.first == previousSearch.searchedCoordinates.first && coordinates.second == previousSearch.searchedCoordinates.second) {
-            return true;
-        }
-    }
-
-    //If the previous search does not match, update the prevous search info and return false
-    previousSearch.businessName = content;
-    previousSearch.searchedCoordinates.first = coordinates.first;
-    previousSearch.searchedCoordinates.second = coordinates.second;
-    previousSearch.JSONfile.clear();
-    return false;
-}
 
 //Returns the business name of the previous search by reference if it exists, otherwise it prints an error
 
@@ -340,8 +232,6 @@ int yelpAPI::yelpGetName(std::string& name) {
 }
 
 int yelpAPI::yelpGetAddress(std::string& resultAddress) {
-
-
 
     if (previousSearch.JSONfile.empty() == false) {
         rapidjson::Document document;
@@ -380,28 +270,25 @@ int yelpAPI::yelpGetRating(double& ratingOutOfFive, int& numberOfReviews) {
         rapidjson::Document document;
         document.Parse(previousSearch.JSONfile.c_str());
 
-        
+
         if (document.HasMember("businesses") == true) {
             //Checking business array at search result index for rating and review count information, if they exist
             const rapidjson::Value& a = document["businesses"];
-             if (a[previousSearch.businessIndex].HasMember("rating") == true && a[previousSearch.businessIndex].HasMember("review_count")){
-                 ratingOutOfFive = a[previousSearch.businessIndex]["rating"].GetDouble();
-                 numberOfReviews = a[previousSearch.businessIndex]["review_count"].GetInt();
-                 
-                 return YELP_SEARCH_SUCCESS;
-             }
+            if (a[previousSearch.businessIndex].HasMember("rating") == true && a[previousSearch.businessIndex].HasMember("review_count")) {
+                ratingOutOfFive = a[previousSearch.businessIndex]["rating"].GetDouble();
+                numberOfReviews = a[previousSearch.businessIndex]["review_count"].GetInt();
+
+                return YELP_SEARCH_SUCCESS;
+            }
         }
 
         return YELP_NO_MATCHING_DATA;
 
     } else {
         std::cerr << "ERROR: No JSON file in cache, use yelpSearch(...) first" << std::endl;
-        return YELP_NO_MATCHING_DATA;
     }
 
-
-
-    return YELP_SEARCH_SUCCESS;
+    return YELP_NO_MATCHING_DATA;
 }
 
 //Returns cost as string, Value is one of $, $$, $$$ and $$$$.
@@ -410,33 +297,120 @@ int yelpAPI::yelpGetCost(std::string &cost) {
 
     if (previousSearch.JSONfile.empty() == false) {
         rapidjson::Document document;
-        document.Parse(previousSearch.JSONfile.c_str());       
+        document.Parse(previousSearch.JSONfile.c_str());
         if (document.HasMember("businesses") == true) {
             const rapidjson::Value& a = document["businesses"];
-             if (a[previousSearch.businessIndex].HasMember("price") == true){
-                 cost = a[previousSearch.businessIndex]["price"].GetString();               
-                 return YELP_SEARCH_SUCCESS;
-             }
+            if (a[previousSearch.businessIndex].HasMember("price") == true) {
+                cost = a[previousSearch.businessIndex]["price"].GetString();
+                return YELP_SEARCH_SUCCESS;
+            }
         }
 
         return YELP_NO_MATCHING_DATA;
 
     } else {
         std::cerr << "ERROR: No JSON file in cache, use yelpSearch(...) first" << std::endl;
+    }
+
+
+    return YELP_NO_MATCHING_DATA;
+}
+
+//Returns coordinates by reference as a pair
+
+int yelpAPI::yelpGetCoordinates(std::pair<double, double> &coordinates) {
+    if (previousSearch.JSONfile.empty() == false) {
+        rapidjson::Document document;
+        document.Parse(previousSearch.JSONfile.c_str());
+
+        //The business list in the JSON is an array
+        if (document.HasMember("businesses") == true) {
+            const rapidjson::Value& a = document["businesses"];
+            //Extracting the address, this is stored inside a object, inside the array
+            //If statements required to ensure that each key exists in the object
+            if (a[previousSearch.businessIndex].HasMember("coordinates")) {
+                if (a[previousSearch.businessIndex]["coordinates"].HasMember("latitude")) coordinates.first = a[previousSearch.businessIndex]["coordinates"]["latitude"].GetDouble();
+                if (a[previousSearch.businessIndex]["coordinates"].HasMember("longitude")) coordinates.second = a[previousSearch.businessIndex]["coordinates"]["longitude"].GetDouble();
+                return YELP_SEARCH_SUCCESS;
+            }
+        }
+
+        return YELP_NO_MATCHING_DATA;
+    } else {
+        std::cerr << "ERROR: No JSON file in cache, use yelpSearch(...) first" << std::endl;
         return YELP_NO_MATCHING_DATA;
     }
 
 
-    return YELP_SEARCH_SUCCESS;
+    return YELP_NO_MATCHING_DATA;
+}
+
+//For now, returns the first category only (categories is an array). In the future might expand to return all categories
+//Note, switch to key=alias if storing the category in a file, key=title is only for display purposes
+
+int yelpAPI::yelpGetCategories(std::string &category) {
+ if (previousSearch.JSONfile.empty() == false) {
+        rapidjson::Document document;
+        document.Parse(previousSearch.JSONfile.c_str());
+
+        //The business list in the JSON is an array
+        if (document.HasMember("businesses") == true) {
+            const rapidjson::Value& a = document["businesses"];
+            //Extracting the address, this is stored inside a object, inside the array
+            //If statements required to ensure that each key exists in the object
+            if (a[previousSearch.businessIndex].HasMember("categories")) {
+                const rapidjson::Value& theCategoryArray = a[previousSearch.businessIndex]["categories"];
+               
+                //Use the alias if storing the category in a file
+                //if(theCategoryArray[0].HasMember("alias")) category = theCategoryArray[0]["alias"].GetString();
+                
+                //Use title if printing out the category
+                if(theCategoryArray[0].HasMember("title")) category = theCategoryArray[0]["title"].GetString();
+                
+                return YELP_SEARCH_SUCCESS;
+            }
+        }
+
+        return YELP_NO_MATCHING_DATA;
+    } else {
+        std::cerr << "ERROR: No JSON file in cache, use yelpSearch(...) first" << std::endl;
+        return YELP_NO_MATCHING_DATA;
+    }
+
+    
+    
+
+    return YELP_NO_MATCHING_DATA;
 }
 
 //Retrieves other information from the last search and returns it as a string
 //This will only work if the data you are looking for exists, and if it is a string, int or double in the JSON file
 //this will not work if the data you are looking for is part of an sub-object (e.g. key = 'title' in the categories object)
 
-int yelpAPI::yelpGetOther(const std::string& content, const std::string& dataToFind, std::pair<double, double> coordinates, unsigned numResultsToSearch, std::string & otherData) {
+int yelpAPI::yelpGetOther(const std::string& keyToFind, std::string &result) {
+    const char * theKey = keyToFind.c_str();
+    if (previousSearch.JSONfile.empty() == false) {
+        rapidjson::Document document;
+        document.Parse(previousSearch.JSONfile.c_str());
+        if (document.HasMember("businesses") == true) {
+            const rapidjson::Value& a = document["businesses"];
+            if (a[previousSearch.businessIndex].HasMember(theKey) == true) {
+                //Checking data type and converting if necessary. 
+                if(a[previousSearch.businessIndex][theKey].IsString())result = a[previousSearch.businessIndex][theKey].GetString();
+                if(a[previousSearch.businessIndex][theKey].IsInt())result = std::to_string(a[previousSearch.businessIndex][theKey].GetInt());
+                if(a[previousSearch.businessIndex][theKey].IsDouble())result = std::to_string(a[previousSearch.businessIndex][theKey].GetDouble());               
+                return YELP_SEARCH_SUCCESS;
+            }
+        }
+
+        return YELP_NO_MATCHING_DATA;
+
+    } else {
+        std::cerr << "ERROR: No JSON file in cache, use yelpSearch(...) first" << std::endl;
+    }
 
 
+    return YELP_NO_MATCHING_DATA;
 
 
     return YELP_SEARCH_SUCCESS;
