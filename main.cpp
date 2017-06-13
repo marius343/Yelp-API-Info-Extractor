@@ -23,78 +23,45 @@ using namespace std;
  * 
  */
 int main(int argc, char** argv) {
- std::string userInput = "\0";
-    yelpAPI::init();
-    int resultSuccess, popularity;
+    std::string userInput = "\0";
 
-    
-   yelpAPI::enablePartialMatches(true, true);
-    
+    int resultSuccess;
     double longitude = 0.0, latitude = 0.0;
     std::pair<double, double> actualCoordinates;
     unsigned numResultsToSearch = 5;
-    std::string additionalParamters = "", resultAddress = "", additionalData = "";
-    
+
+    //The API must be re-initialized after retrieving the access token (for now at least)
+    yelpAPI::init();
     yelpAPI::retreiveAccessToken();
     yelpAPI::close();
-    yelpAPI::init();
-    
-    while(true){
-     std::cout << "Enter Search term: ";
-     std::getline(std::cin, userInput);    
-     if(userInput == "end" || userInput == "\0") break;
-    yelpAPI::yelpGetAddress(userInput, std::make_pair(longitude, latitude), numResultsToSearch, resultAddress);
-    
-    
-    }
-    
-    /*
 
-    while (userInput != "end") {
+
+    yelpAPI::init();
+
+    while (true) {
+        int numberOfReviews;
+        double ratingOutOfFive;
+        std::string name = "", price = "", resultAddress = "";
+
+
         std::cout << "Enter Search term: ";
         std::getline(std::cin, userInput);
-        if (userInput == "end") break;
-        resultSuccess = yelpAPI::yelpGetAddress(userInput, std::make_pair(longitude, latitude), numResultsToSearch, resultAddress);
-        std::cout << resultAddress << std::endl;
-        if (resultSuccess == 0) {
-            resultSuccess = yelpAPI::yelpGetRating(userInput, std::make_pair(longitude, latitude), numResultsToSearch, popularity);
-            if (resultSuccess == 0) std::cout << "Number Of Check-ins: " << popularity << std::endl;
-            else std::cout << "ERROR: " << resultSuccess << std::endl;
-        } else {
-            std::cout << "ERROR: " << resultSuccess << std::endl;
-        }
-        
-        if(resultSuccess == 0){
-            resultSuccess = yelpAPI::yelpGetCost(userInput, std::make_pair(longitude, latitude), numResultsToSearch, actualCoordinates);
-            if (resultSuccess == 0) std::cout << std::fixed << std::setprecision(14) << "Coordinates:  " << actualCoordinates.first << ", " << actualCoordinates.second << std::endl;
-            else std::cout << "ERROR: " << resultSuccess << std::endl;
-        }
-        
-        std::cout<< std::endl;
-        
-        if (resultSuccess == 0) {
-            
-            std::string secondUserInput = "";
-            while (secondUserInput != "no") {
-                std::cout << "Find additional data?: ";
-                std::getline(std::cin, secondUserInput);
-                if (secondUserInput == "no" || secondUserInput == "No") break;
-                resultSuccess = yelpAPI::yelpGetOther(userInput, secondUserInput, std::make_pair(longitude, latitude), numResultsToSearch, additionalData);
+        if (userInput == "end" || userInput == "\0") break;
+        //DOing the search and retrieving all the information
+        yelpAPI::yelpSearch(userInput, std::make_pair(longitude, latitude), numResultsToSearch);
+        yelpAPI::yelpGetName(name);
+        yelpAPI::yelpGetAddress(resultAddress);
+        yelpAPI::yelpGetRating(ratingOutOfFive, numberOfReviews);
+        if(yelpAPI::yelpGetCost(price) != 0 ) price = "?";
 
-                if (resultSuccess == 0) {
-                    std::cout << secondUserInput << ": " << additionalData << std::endl;
-                } else {
-                    std::cout << "The data specified does not exist!" << std::endl;
-                }
-
-                additionalData.clear();
-            }
-        }
-
-        std::cout << "\n" << std::endl;
-        resultAddress.clear();
+        //Printing out result (for testing only)
+        std::cout << "\n" << name << "\n" << resultAddress << std::endl;
+        std::cout << ratingOutOfFive << "/5 stars (" << numberOfReviews << " reviews)" << std::endl;
+        std::cout << "Price: " << price << std::endl;
+        std::cout << std::endl;
     }
-*/
+
+
     return 0;
 }
 
