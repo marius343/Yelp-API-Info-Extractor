@@ -95,31 +95,25 @@ size_t writeDataToString(char *ptr, size_t size, size_t nmemb, void *stream) {
 void yelpAPI::retreiveAccessToken() {
     static const std::string yelpOAUTH = "https://api.yelp.com/oauth2/token";
     std::string result = instPtr->getAccessTokenResponse(yelpOAUTH);
-    if (result.size() != 0) {
-        //Finding and extracting access token
-        std::string theToken = "", toFind = "\"access_token\": \"";
-        auto position = result.find(toFind);
+   
+     if (result.size() != 0) {
+        rapidjson::Document document;
+        document.Parse(result.c_str());
 
-        position = position + toFind.size();
-        if (position != std::string::npos) {
-            char currentCharacter = result.at(position);
-            while (position != std::string::npos) {
-                if (currentCharacter != '\"') theToken = theToken + currentCharacter;
-                else break;
-                position++;
-                currentCharacter = result.at(position);
-            }
+        if (document.HasMember("access_token")) {
 
-            theAccessToken = theToken;
+            theAccessToken = document["access_token"].GetString();
+            //std::cout << theAccessToken << std::endl;
 
 
         } else {
-            std::cerr << "ERROR: unexpected token retrieval response" << std::endl;
+            std::cout << "ERROR: access_token field not found" << std::endl;
         }
 
     } else {
         std::cerr << "ERROR: no result received from token authentication" << std::endl;
     }
+    
 }
 
 //Searches for the provided search term and attempts to find a complete match, partial matches will be added later
@@ -131,7 +125,7 @@ int yelpAPI::yelpSearch(const std::string& content, std::pair<double, double> co
         std::string contentSimplified = simplifyString(content);
 
 
-        previousSearch.JSONfile = instPtr->getSearchResponse(content, std::make_pair(43.6543, -79.3860), numResultsToSearch);
+        previousSearch.JSONfile = instPtr->getSearchResponse(content, coordinates, numResultsToSearch);
 
 
         if (previousSearch.JSONfile.empty() == false) {

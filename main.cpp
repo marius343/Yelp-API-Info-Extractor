@@ -29,7 +29,7 @@ std::ostream& bold_off(std::ostream& os) {
  */
 int main(int argc, char** argv) {
     std::string userInput = "\0";
-    double longitude = 0.0, latitude = 0.0;
+    double longitude = 43.6543, latitude = -79.3860;
 
     unsigned numResultsToSearch = 5;
 
