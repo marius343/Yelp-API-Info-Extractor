@@ -74,6 +74,11 @@ struct curl_boo {
         if (retValue != CURLE_OK) {
             result.clear();
         }
+               
+        //Freeing memory
+        curl_slist_free_all(theHeader);
+        
+        
         return result;
     }
 
